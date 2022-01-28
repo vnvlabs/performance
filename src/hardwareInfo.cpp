@@ -13,69 +13,6 @@ namespace {
 
 static bool PAPI_IS_INITIALIZED = false;
 
-nlohmann::json getDefaultHWJson() {
-
-   nlohmann::json j = nlohmann::json::object();
-   const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
-
-   if (hwinfo == nullptr) {
-           std::cout << "sdfsdfsdfsdfsdf" << std::endl;
-      j["error"] = "Cannot extract hardware information";
-      return j;
-   }
-
-   j["version"] = PAPI_VERSION;
-
-   struct utsname uname_info;
-   uname(&uname_info);
-   nlohmann::json uinfo = nlohmann::json::object();
-   uinfo["Operating System"] = uname_info.sysname;
-   uinfo["Release"] = uname_info.release;
-   uinfo["Release"] = uname_info.nodename;
-   uinfo["Release"] = uname_info.version;
-   uinfo["Release"] = uname_info.machine;
-   uinfo["Release"] = uname_info.version;
-   j["Machine Info"] = uinfo;
-
-   std::ostringstream oss;
-   oss << hwinfo->vendor_string << "(" << hwinfo->vendor << ")";
-   j["Vendor"] = oss.str();
-
-   std::ostringstream os1;
-   os1 << hwinfo->model_string << "(" << hwinfo->model << ")";
-   j["Model"] = os1.str();
-
-   j["CPU Revision"] = hwinfo->revision;
-   if (hwinfo->cpuid_family > 0 ) {
-       nlohmann::json fam = nlohmann::json::object();
-       fam["family"] = hwinfo->cpuid_family;
-       fam["Model"] = hwinfo->cpuid_model;
-       fam["Stepping"] = hwinfo->cpuid_stepping;
-       j["CPUID"] = fam;
-   }
-   j["CPU Max MHz"] = hwinfo->cpu_max_mhz;
-   j["CPU Min MHz"] = hwinfo->cpu_min_mhz;
-   j["Total Cores"] = hwinfo->totalcpus;
-   j["SMT Threads Per Core"] = hwinfo->threads;
-   j["Cores PER Socket"] = hwinfo->cores;
-   j["Sockets"] = hwinfo->sockets;
-   j["NUMA Regions"] = hwinfo->nnodes;
-   j["Running in a VM"] = hwinfo->virtualized;
-   j["VM Vendor"] = (hwinfo->virtualized) ? hwinfo->virtual_vendor_string : "N/A";
-   j["VM Vendor Version"] = (hwinfo->virtualized) ? hwinfo->virtual_vendor_version : "N/A";
-
-   int cnt = PAPI_get_opt(PAPI_MAX_HWCTRS, nullptr);
-   j["Number Hardware Counters"] = cnt;
-   int mpx = PAPI_get_opt(PAPI_MAX_MPX_CTRS,nullptr);
-   j["Max multiplex Counters"] = mpx;
-
-   PAPI_option_t options;
-   PAPI_get_opt(PAPI_COMPONENTINFO, &options);
-   unsigned int x= options.cmp_info->fast_counter_read;
-   j["Fast Counter Read"] = x;
-   return j;
-}
-
 bool InitalizePAPI() {
   if (!PAPI_IS_INITIALIZED) {
      int retVal = PAPI_library_init( PAPI_VER_CURRENT );
@@ -83,29 +20,166 @@ bool InitalizePAPI() {
   }
   return PAPI_IS_INITIALIZED;
  }
+
+void getDefaultHWJson(VnV::IOutputEngine* engine ) {
+
+   nlohmann::json j = nlohmann::json::object();
+   const PAPI_hw_info_t* hwinfo = PAPI_get_hardware_info();
+
+   if (hwinfo == nullptr) {
+      return;
+   }
+
+   struct utsname uname_info;
+   uname(&uname_info);
+   nlohmann::json uinfo = nlohmann::json::object();
+   
+   MetaData d;
+   d["table"] = "table1";
+
+   engine->Put("Operating System", uname_info.sysname, d);
+   engine->Put("Release", uname_info.release, d);
+   engine->Put("Node Name", uname_info.nodename, d);
+   engine->Put("Version", uname_info.version, d);
+   engine->Put("Machine", uname_info.machine, d);
+   engine->Put("CPU Revision",hwinfo->revision, d);
+   
+   std::ostringstream oss;
+   oss << hwinfo->vendor_string << "(" << hwinfo->vendor << ")";
+   engine->Put("vendor", oss.str(), d);
+  
+   std::ostringstream os1;
+   os1 << hwinfo->model_string << "(" << hwinfo->model << ")";
+   engine->Put("model", os1.str(), d);
+   
+   d["table"] = "table2";
+
+   engine->Put("CPU Max MHz", hwinfo->cpu_max_mhz, d);
+   engine->Put("CPU Min MHz", hwinfo->cpu_min_mhz, d);
+   engine->Put("Total Cores", hwinfo->totalcpus, d);
+   engine->Put("SMT Threads Per Core", hwinfo->threads, d);
+   engine->Put("Cores PER Socket", hwinfo->cores, d);
+   engine->Put("Sockets", hwinfo->sockets, d);
+   engine->Put("NUMA Regions", hwinfo->nnodes, d);
+   engine->Put("Running in a VM", hwinfo->virtualized, d);
+   
+   if (hwinfo->virtualized) {
+    engine->Put("VM Vendor", hwinfo->virtual_vendor_string ,d);
+    engine->Put("VM Vendor Version", hwinfo->virtual_vendor_version , d);
+   }
 }
+
+}
+
+class PapiHardwareAction : public VnV::IAction {
+public:
+
+   PapiHardwareAction() {
+      InitalizePAPI();
+   }
+
+   void initialize() override {
+      getDefaultHWJson(getEngine());
+   }
+};
+
 
 /**
  * COMPUTER HARDWARE AND MEMORY INFORMATION
  * ========================================
  *
  * The compute hardware information is:
- *
- * .. vnv-jchart::
- *    :main: Data.hardware.Value
- *
- *    $$main$$
- *
+ * 
+ * .. vnv-quick-table::
+ *    :names: ["Property", "Value"]
+ *    :fields: ["name", "value"]
+ *    :data: *|[]|[?_table==`table1`].{ "name" : name , "value" : value }
+ *    :title: Computer Information    
+ *     
+ * 
+ * The processor information is:
+ * 
+ * 
+ * .. vnv-quick-table::
+ *    :names: ["Property", "Value"]
+ *    :fields: ["name", "value"]
+ *    :data: *|[]|[?_table==`table2`].{ "name" : name , "value" : value }
+ *    :title: Processor Information    
+ *     
+ *    
+ * .. vnv-dashboard::  
+ * 
+ *   .. vnv-db-widget::
+ *      :row: 0
+ *      :col: 0
+ *      :size-x: 6
+ *      :size-y: 2
+ * 
+ *      .. vnv-gauge::
+ *         :title: Hello
+ *         :min: `10`
+ *         :max: `200`
+ *         :curr: `120`
+ *      
+ * 
+ *   .. vnv-db-widget::
+ *      :row: 0
+ *      :col: 6
+ *      :size-x: 6
+ *      :size-y: 2
+ *      
+ *      .. vnv-line::
+ *         :title: Test Line Chart
+ *         :xaxis: `["e","f","g"]`
+ *         :yaxis: `[1,2,3]`
+ *         :label: Sample Series
+ *      
+ * 
+ *   .. vnv-db-widget::
+ *      :row: 2
+ *      :col: 0
+ *      :size-x: 6
+ *      :size-y: 2     
+ * 
+ *      .. vnv-multi-line::
+ *         :title: Multi Line Chart 
+ *         :xaxis: `["e","f","g"]`
+ *         :yaxis: ["`[1,2,3]`","`[2,4,6]`","`[2,4,6]`"]
+ *         :labels: ["Series 1", "Series 2","Series 3"] 
+ *         :type: ["line", "area", "column"]
+ *      
+ * 
+ *   .. vnv-db-widget::
+ *      :row: 2
+ *      :col: 6
+ *      :size-x: 6
+ *      :size-y: 2
+ *      
+ *      .. vnv-time-series::
+ *         :title: Time Series Example
+ *         :times: `[10,20,30,40,60]`
+ *         :data: `[10,20,20,30,50]`
+ *         :label: Time Data
+ *       
+ * .. vnv-scatter::
+ *         :title: Scatter Example
+ *         :xdata: `[10,20,30,40,60]`
+ *         :ydata: `[10,20,20,30,50]`
+ *         :label: Scatter Data
+ *          
+ * 
+ * .. vnv-if:: `1`==`1`
+ *  
+ *    Welcome to the machine. 
+ * 
  */
-INJECTION_TEST(PNAME,hardware_info) {
-  if (InitalizePAPI() && (type == InjectionPointType::Begin || type == InjectionPointType::Single) ) {
-    engine->Put( "hardware",getDefaultHWJson());
-  }
-  return SUCCESS;
+INJECTION_ACTION(PNAME,hardware, "{\"type\":\"object\"}") {
+  return new PapiHardwareAction();
 }
 
 class flopsRunner {
 public:
+  int count = 0;
   std::size_t EventSetCounter = 0;
   bool started = false;
   int EventSet = PAPI_NULL;
@@ -166,53 +240,29 @@ public:
 
 
 /**
- * Recorded Floating point operations and cycles.
+ * Recorded Floating point operations
  * ==============================================
  *
  * The figure below shows the number of floating point operations recorded
- * using PAPI throughout the duration of this injection point.
+ * using PAPI throughout the duration of this execution.
  *
- *
- * .. vnv-chart::
- *    :labels: Data[?Name == 'stage'].Value
- *    :flops: Data[?Name == 'fpins'].Value
- *    :cycs: Data[?Name == 'cycles'].Value
- *
- *    {
- *       "type" : "line",
- *       "data" : {
- *          "labels" : $$labels$$,
- *          "datasets" : [
- *             {
- *               "label": "Recorded Floating Point Operations",
- *               "borderColor": "rgb(0, 255, 0)",
- *               "data": $$flops$$,
- *               "yAxisID" : "A"
- *             },
- *             {
- *               "label": "Recorded Cycles",
- *               "borderColor": "rgb(255, 0, 0)",
- *               "data": $$cycs$$,
- *               "yAxisID" : "B"
- *             }
- *          ]
- *       },
- *       "options" : {
- *           "scales" : {
- *             "yAxes" : [
- *                { "id" : "A" , "position" : "left", "type" : "linear" },
- *                { "id" : "B", "position" : "right", "type" : "linear" }
- *             ]
- *
- *           }
- *       }
- *    }
- *
+ * .. vnv-quick-chart::
+ *      :name: FLOPS
+ *      :data: fpins 
+ *      :title: Floating point operations. 
+ *  
  * .. note::
  *    Counters will include any cost associated with injection point tests in child nodes. Users should use caution when using nested profiling with this toolkit.
  *
  */
 INJECTION_TEST_R(PNAME,flops, flopsRunner) {
+  engine->Put("fpins",runner->count++);
+  return SUCCESS;
+}
+
+
+INJECTION_TEST_R(PNAME,flops1, flopsRunner) {
+  
   InitalizePAPI();
   if (type == InjectionPointType::Single) {
      engine->Put( "stage", stageId);
