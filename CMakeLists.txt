@@ -30,7 +30,12 @@ find_package(Injection REQUIRED)
 find_package(PAPI REQUIRED)
 
 add_library(papiTest SHARED "")
+
+target_include_directories(papiTest PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include ${PAPI_INCLUDE_DIRS})
+target_link_libraries(papiTest PRIVATE ${PAPI_LIBRARIES})
+
 add_subdirectory(src)
+
 
 link_vnv_file(papiTest Papi cpp)
 

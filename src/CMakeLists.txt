@@ -1,4 +1,6 @@
-target_sources(papiTest PRIVATE ${CMAKE_CURRENT_LIST_DIR}/hardwareInfo.cpp)
+target_sources(papiTest PRIVATE 
+    ${CMAKE_CURRENT_LIST_DIR}/initialize.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/hardwareInfo.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/memory.cpp
 
-target_include_directories(papiTest PRIVATE ${PAPI_INCLUDE_DIRS})
-target_link_libraries(papiTest PRIVATE ${PAPI_LIBRARIES})
+)
