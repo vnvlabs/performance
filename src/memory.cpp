@@ -86,32 +86,15 @@ ProcInfo getMemoryInfo() {
   return j;
 }
 
-class ProcAction : public VnV::IAction {
-public:
-  ProcAction(const nlohmann::json &config) {
-    implements_injection_point(true);
-    VnVPapi::InitalizePAPI();
+void hardware(VnV::IOutputEngine* engine) {
+  
+  VnVPapi::InitalizePAPI();
+
+  const PAPI_hw_info_t *hwinfo = PAPI_get_hardware_info();
+
+  if (hwinfo == nullptr) {
+    return;
   }
-
-  void write(std::string name) {
-    auto a = getMemoryInfo();
-
-    getEngine()->Put("name", name);
-    getEngine()->Put("system_phys_used", a.phyiscalMemoryUsed);
-    getEngine()->Put("process_phys_used", a.processPhysicalMemory);
-    getEngine()->Put("peak_process_phys_used", a.peakProcessPhysicalMemory);
-  }
-
-  virtual void initialize() override {
-    
-    auto engine = getEngine();
-
-    const PAPI_hw_info_t *hwinfo = PAPI_get_hardware_info();
-
-    if (hwinfo == nullptr) {
-      return;
-    }
-
     struct utsname uname_info;
     uname(&uname_info);
     nlohmann::json uinfo = nlohmann::json::object();
@@ -147,11 +130,33 @@ public:
       engine->Put("VM Vendor", hwinfo->virtual_vendor_string, d);
       engine->Put("VM Vendor Version", hwinfo->virtual_vendor_version, d);
     }
-
+    
     auto a = getMemoryInfo();
-    engine->Put("totalPhys", a.totalPhysicalMem);
-    write("Initialize");
+    engine->Put("totalPhys", a.totalPhysicalMem, d);
+    
+}
 
+
+class ProcAction : public VnV::IAction {
+public:
+  ProcAction(const nlohmann::json &config) {
+    implements_injection_point(true);
+    VnVPapi::InitalizePAPI();
+  }
+
+  void write(std::string name) {
+    auto a = getMemoryInfo();
+
+    getEngine()->Put("name", name);
+    getEngine()->Put("system_phys_used", a.phyiscalMemoryUsed);
+    getEngine()->Put("process_phys_used", a.processPhysicalMemory);
+    getEngine()->Put("peak_process_phys_used", a.peakProcessPhysicalMemory);
+  }
+
+  virtual void initialize() override {
+    
+    hardware(getEngine());    
+    write("Initialize");
 
   };
 
@@ -167,7 +172,12 @@ public:
 };
 
 /**
- *
+ * @title Papi Memory And Hardware Monitor
+ * @shortTitle Memory Usage
+ * 
+ * These results show memory usage statistics collected 
+ * by the Papi plugin during runtime. 
+ * 
  * Total Physical Memory: :vnv:`totalPhys` Bytes
  * ------------------------------------------
  *
@@ -190,3 +200,24 @@ public:
  * 
  */
 INJECTION_ACTION(PNAME, Monitor, "{}") { return new ProcAction(config); }
+
+
+/**
+ * @title Hardware Information
+ * @shortTitle Hardware
+ *  
+ * The following table shows the Hardware information extracted at runtime
+ * by Papi.
+ * 
+ * .. vnv-quick-table::
+ *    :names: ["Property", "Value"]
+ *    :fields: ["name", "value"]
+ *    :data: *|[?_table==`hardware`].{ "name" : Name , "value" : Value }
+ *
+ */
+INJECTION_TEST(PNAME, Hardware) { 
+  if (type == VnV::InjectionPointType::Begin) {
+    hardware(engine);
+  }
+  return SUCCESS;  
+}

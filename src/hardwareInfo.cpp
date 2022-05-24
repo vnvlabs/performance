@@ -2,6 +2,7 @@
 #include "initialize.h"
 
 
+INJECTION_PLUGIN(Papi)
 
 /**
  * 

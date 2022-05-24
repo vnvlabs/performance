@@ -4,7 +4,6 @@ FROM ${FROM_IMAGE}:latest
 ARG COMMIT_HASH=unknown
 LABEL  vnv.version.simple=${COMMIT_HASH}
 
-ENV VNV_CONFIG=${VNV_CONFIG}:${SOURCE_DIR}/perf/.vnv-config.json
 
 #Install the simple application example. 
 COPY . ${SOURCE_DIR}/perf  
@@ -17,4 +16,5 @@ RUN  cd ${SOURCE_DIR}/perf \
      && make \
      && make install 
 
+ENV VNV_CONFIG=${VNV_CONFIG}:${SOURCE_DIR}/perf/build/vnv.__registration__
 
