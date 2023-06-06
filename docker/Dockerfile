@@ -1,10 +1,6 @@
 ARG FROM_IMAGE=vnv_base
 FROM ${FROM_IMAGE}
 
-ARG COMMIT_HASH=unknown
-LABEL  vnv.version.simple=${COMMIT_HASH}
-
-ENV VNV_CONFIG=${VNV_CONFIG}:${SOFTWARE_DIR}/perf/vnv.__registration__
 
 #Install the simple application example. 
 COPY . ${SOURCE_DIR}/perf
