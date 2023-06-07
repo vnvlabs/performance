@@ -14,5 +14,5 @@ RUN  cd ${SOURCE_DIR}/perf \
      && make install \ 
      && rm -rf ${SOURCE_DIR}/perf
 
-
+ENV VNV_PLUGINS = ${VNV_PLUGINS}@Papi:${SOFTWARE_DIR}/plugins/perf/lib/libpapiTest.so
 
