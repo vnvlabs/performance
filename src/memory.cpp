@@ -195,7 +195,7 @@ public:
  * .. vnv-quick-table::
  *    :names: ["Property", "Value"]
  *    :fields: ["name", "value"]
- *    :data: *|[?_table==`hardware`].{ "name" : Name , "value" : Value }
+ *    :data: {{*|[?_table==`hardware`].{ "name" : Name , "value" : Value }}}
  *
  * 
  */
@@ -212,7 +212,7 @@ INJECTION_ACTION(PNAME, Monitor, "{}") { return new ProcAction(config); }
  * .. vnv-quick-table::
  *    :names: ["Property", "Value"]
  *    :fields: ["name", "value"]
- *    :data: *|[?_table==`hardware`].{ "name" : Name , "value" : Value }
+ *    :data: {{*|[?_table==`hardware`].{ "name" : Name , "value" : Value }}}
  *
  */
 INJECTION_TEST(PNAME, Hardware) { 
