@@ -14,5 +14,6 @@ RUN  cd ${SOURCE_DIR}/perf \
      && make install \ 
      && rm -rf ${SOURCE_DIR}/perf
 
+#Register the plugin so it gets loaded automatically by VnV Each time it runs. 
 RUN ${VNV_REGISTER} plugin Papi ${SOFTWARE_DIR}/plugins/perf/lib/libpapiTest.so
 

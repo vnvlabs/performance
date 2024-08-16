@@ -15,7 +15,7 @@ INJECTION_PLUGIN(Papi)
  * .. vnv-quick-table::
  *    :names: ["Property", "Value"]
  *    :fields: ["name", "value"]
- *    :data: {{*|[?_table==`hardware`].{ "name" : Name , "value" : Value }}}
+ *    :data: {{ as_json(*|[?_table==`hardware`].{ "name" : Name , "value" : Value }) }}
  *
  */
 INJECTION_ACTION(PNAME, Hardware, "{\"type\":\"object\"}") {

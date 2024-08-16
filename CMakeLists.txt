@@ -13,11 +13,12 @@ set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake)
 
 if(POLICY CMP0079)
   cmake_policy(SET CMP0079 NEW)
+  cmake_policy(SET CMP0074 NEW)
 endif()
 
 # Note: This line was added because I forgot to link PAPI. It makes it a
 # compiler error to have undefined symbols in the shared lib.
-string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--no-undefined")
+#string(APPEND CMAKE_SHARED_LINKER_FLAGS " -Wl,--no-undefined")
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type selected, default to RelWithDebInfo")
@@ -33,6 +34,10 @@ add_library(papiTest SHARED "")
 
 target_include_directories(papiTest PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include ${PAPI_INCLUDE_DIRS})
 target_link_libraries(papiTest PRIVATE ${PAPI_LIBRARIES})
+
+target_include_directories(papiTest PUBLIC ${MPI_C_INCLUDE_PATH})
+target_compile_options(papiTest PRIVATE ${MPI_CXX_COMPILE_FLAGS})
+target_link_libraries(papiTest PRIVATE ${MPI_CXX_LIBRARIES} ${MPI_CXX_LINK_FLAGS})
 
 add_subdirectory(src)
 

@@ -7,6 +7,9 @@
 
 #include "initialize.h"
 
+#define VNV_PAPI_ERROR(r) if (r!= PAPI_OK) { VnV_Error("Could not create PAPI Event Set (%s)", PAPI_descr_error(r)); }
+       
+
 namespace {
 
 long parseLine(char *line) {
@@ -137,27 +140,50 @@ void hardware(VnV::IOutputEngine* engine) {
 }
 
 
+
+
 class ProcAction : public VnV::IAction {
+
+  int EventSet = PAPI_NULL;
+  std::size_t EventSetCounter = 0;
+  std::vector<long long> values;
+
 public:
   ProcAction(const nlohmann::json &config) {
     implements_injection_point(true);
     VnVPapi::InitalizePAPI();
+
+    int r = PAPI_create_eventset(&EventSet); VNV_PAPI_ERROR(r);
+    r = PAPI_add_event(EventSet, PAPI_TOT_INS); VNV_PAPI_ERROR(r);
+    r = PAPI_add_event(EventSet, PAPI_TOT_CYC); VNV_PAPI_ERROR(r);
+    r = PAPI_add_event(EventSet, PAPI_L1_DCM); VNV_PAPI_ERROR(r);
+    
+    values.resize(3);
+    
   }
 
   void write(std::string name) {
+
+    PAPI_read(EventSet, &values[0]);
+
+
     auto a = getMemoryInfo();
 
     getEngine()->Put("name", name);
     getEngine()->Put("system_phys_used", a.phyiscalMemoryUsed);
     getEngine()->Put("process_phys_used", a.processPhysicalMemory);
     getEngine()->Put("peak_process_phys_used", a.peakProcessPhysicalMemory);
+    getEngine()->Put("instructions", values[0]);
+    getEngine()->Put("cycles", values[1]);
+    getEngine()->Put("l1", values[2]);
+    
   }
 
   virtual void initialize() override {
     
+    PAPI_start(EventSet);
     hardware(getEngine());    
     write("Initialize");
-
   };
 
   virtual void injectionPointStart(std::string packageName, std::string id) {
@@ -168,7 +194,12 @@ public:
 
   virtual void injectionPointEnd() { write("End"); };
 
-  virtual void finalize() { write("Finalize"); }
+  virtual void finalize() { 
+    
+    write("Finalize");
+    PAPI_stop(EventSet, &values[0]);
+
+  }
 };
 
 /**
@@ -178,46 +209,50 @@ public:
  * These results show memory usage statistics collected 
  * by the Papi plugin during runtime. 
  * 
- * Total Physical Memory: :vnv:`totalPhys` Bytes
- * ------------------------------------------
  *
- * .. vnv-plotly::
- *    :trace.ram: scatter
- *    :trace.pram: scatter
- *    :trace.peak: scatter
- *    :ram.y: {{system_phys_used}}
- *    :pram.y: {{process_phys_used}}
- *    :peak.y: {{peak_process_phys_used}}
- *
- * Hardware
+ * Hardware Information
  * --------
  *  
  * .. vnv-quick-table::
  *    :names: ["Property", "Value"]
  *    :fields: ["name", "value"]
- *    :data: {{*|[?_table==`hardware`].{ "name" : Name , "value" : Value }}}
+ *    :data: {{ as_json(*|[?_table==`hardware`].{ "name" : Name , "value" : Value }) }}
  *
+ * .. vnv-plotly::
+ *    :trace.ram: scatter
+ *    :trace.pram: scatter
+ *    :trace.peak: scatter
+ *    :trace.inst: scatter
+ *    :trace.cycl: scatter
+ *    :ram.y: {{system_phys_used}}
+ *    :ram.x: {{name}}
+ *    :pram.y: {{process_phys_used}}
+ *    :pram.x: {{name}}
+ *    :peak.y: {{peak_process_phys_used}}
+ *    :peak.x: {{name}}
+ *    :inst.y: {{instructions}}
+ *    :inst.x: {{name}} 
+ *    :cycl.y: {{cycles}}
+ *    :cycl.x: {{name}}
  * 
+ * .. vnv-plotly::
+ *    :trace.fram: scatter
+ *    :trace.pram: scatter
+ *    :trace.peak: scatter
+ *    :trace.inst: scatter
+ *    :trace.cycl: scatter
+ *    :fram.y: {{vec_delta(system_phys_used)}}
+ *    :fram.x: {{name}}
+ *    :pram.y: {{vec_delta(process_phys_used)}}
+ *    :pram.x: {{name}}
+ *    :peak.y: {{vec_delta(peak_process_phys_used)}}
+ *    :peak.x: {{name}}
+ *    :inst.y: {{vec_delta(instructions)}}
+ *    :inst.x: {{name}} 
+ *    :cycl.y: {{vec_delta(cycles)}}
+ *    :cycl.x: {{name}}
  */
+
 INJECTION_ACTION(PNAME, Monitor, "{}") { return new ProcAction(config); }
 
 
-/**
- * @title Hardware Information
- * @shortTitle Hardware
- *  
- * The following table shows the Hardware information extracted at runtime
- * by Papi.
- * 
- * .. vnv-quick-table::
- *    :names: ["Property", "Value"]
- *    :fields: ["name", "value"]
- *    :data: {{*|[?_table==`hardware`].{ "name" : Name , "value" : Value }}}
- *
- */
-INJECTION_TEST(PNAME, Hardware) { 
-  if (type == VnV::InjectionPointType::Begin) {
-    hardware(engine);
-  }
-  return SUCCESS;  
-}

@@ -2,22 +2,7 @@
 
 using namespace VnV;
 
-typedef std::function<void(VnV::IOutputEngine* engine, 
-                           const nlohmann::json& config,
-                           const std::map<int,int>& emap,
-                           const std::vector<long long>& cumm, 
-                           const std::vector<long long>& idx)> papi_write_func;
 
-static std::map<std::string, 
-                std::pair<
-                    std::vector<int>, 
-                    papi_write_func
-                >
-              > papi_event_set_map =
-{
-
-  
-};
 
 
 class PapiEventSet {
@@ -142,7 +127,7 @@ class PapiEventSet {
  *   
  * 
  */
-INJECTION_ACTION(PNAME, Monitor, "{\"type\":\"object\"}") {
+INJECTION_ACTION(PNAME, flops, "{\"type\":\"object\"}") {
 
   class PapiAction : public VnV::IAction {
 
